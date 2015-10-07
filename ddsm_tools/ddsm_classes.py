@@ -195,6 +195,10 @@ class ddsm_abnormality(object):
             im_od = (im - 4096.99) / -1009.01
         elif (self.scan_institution == 'ISMD') and (self.scanner_type == 'HOWTEK'):
             im_od = (-0.00099055807612 * im) + 3.96604095240593
+
+        # perform heath noise correction
+        im_od[im_od < 0.05] = 0.05
+        im_od[im_od > 4.0] = 4.0
         return im_od
 
     # todo fix output paths
@@ -241,7 +245,35 @@ class ddsm_abnormality(object):
         # do appropriate image transformations
         # save resultant location for csv writing later
         if crop:
-            im_array = im_array[self.y_lo:self.y_hi, self.x_lo:self.x_hi]
+            #crop bounds
+            cy_lo, cy_hi, cx_lo, cx_hi = self.y_lo, self.y_hi, self.x_lo, self.x_hi
+
+            # square crop
+            height = self.y_hi-self.y_lo
+            width = self.x_hi-self.x_lo
+
+            if height > width:
+                diff = height - width
+                pad = int(np.floor(diff/2))
+                cx_lo -= pad
+                cx_hi += pad
+                if diff % 2 == 1:  # is odd
+                    cx_hi += 1
+
+            if height < width:
+                diff = width - height
+                pad = int(np.floor(diff/2))
+                cy_lo -= pad
+                cy_hi += pad
+                if diff % 2 == 1:  # is odd
+                    cy_hi += 1
+
+            cx_lo = max(0, cx_lo)
+            cy_lo = max(0, cy_lo)
+            cx_hi = min(self.width, cx_hi)
+            cy_hi = min(self.height, cy_hi)
+
+            im_array = im_array[cy_lo:cy_hi, cx_lo:cx_hi]
 
         # convert to optical density
         if od_correct:
@@ -259,6 +291,7 @@ class ddsm_abnormality(object):
         if resize:
             im = im.resize(resize, resample=Image.LINEAR)
 
+
         # save image
         im.save(im_path, 'tiff')
 
@@ -266,7 +299,7 @@ class ddsm_abnormality(object):
         return im_path
 
     # TODO save mask
-    def save_mask(self, out_dir=None, out_name=None):
+    def save_mask(self, out_dir=None, out_name=None, force=False):
          # construct image path
         if out_dir is None:
             out_dir = os.path.split(self.input_file_path)[0]
@@ -276,9 +309,15 @@ class ddsm_abnormality(object):
 
         im_path = os.path.join(out_dir, out_name)
 
-        img = Image.new('L', (self.width, self.height), 0)
+        # don't write if image exists and we aren't forcing it
+        if os.path.exists(im_path) and not force:
+            return im_path
+
+        img = Image.new('1', (self.width, self.height), 0)
         ImageDraw.Draw(img).polygon(self.roi, outline=1, fill=1)
         img.save(im_path, 'tiff')
+
+        return im_path
 
     ###################################################
     # Representation

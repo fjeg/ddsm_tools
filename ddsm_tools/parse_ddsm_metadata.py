@@ -4,7 +4,6 @@ import os
 from ddsm_util import get_ics_info, get_abnormality_data
 from ddsm_classes import ddsm_abnormality
 
-
 fields = ['patient_id',
           'breast_density',
           'side',
@@ -29,7 +28,8 @@ fields = ['patient_id',
           'x_hi',
           'y_hi',
           'od_img_path',
-          'od_crop_path']
+          'od_crop_path',
+          'mask_path']
 
 
 def make_data_set(root, out_dir):
@@ -93,7 +93,9 @@ def make_data_set(root, out_dir):
                     # resized od images
                     # d = os.path.join(out_dir, 'od_resized_crops')
                     # abnormality.save_image(out_dir=d, od_correct=True, crop=True, resize=(256, 256))
-                    abnormality.save_mask(out_dir=mask_dir)
+
+                    abnormality.mask_path = abnormality.save_mask(out_dir=mask_dir)
+
                 except ValueError:
                     print "Error with abnormality at " + abnormality.input_file_path
 
