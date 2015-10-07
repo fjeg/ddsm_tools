@@ -198,7 +198,7 @@ class ddsm_abnormality(object):
 
         # perform heath noise correction
         im_od[im_od < 0.05] = 0.05
-        im_od[im_od > 4.0] = 4.0
+        im_od[im_od > 3.0] = 3.0
         return im_od
 
     # todo fix output paths
